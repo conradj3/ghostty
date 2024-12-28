@@ -1,0 +1,56 @@
+name: Build and Deploy to PPA
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install dependencies
+      run: |
+        brew install zig
+        apt install libgtk-4-dev libadwaita-1-dev git
+
+    - name: Build project
+      run: |
+        zig build -p $HOME/.local -Doptimize=ReleaseFast
+
+    - name: Create Debian package
+      run: |
+        mkdir -p ghostty_package/DEBIAN
+        mkdir -p ghostty_package/usr/local/bin
+        cp $HOME/.local/bin/ghostty ghostty_package/usr/local/bin/
+        cat <<EOF > ghostty_package/DEBIAN/control
+        Package: ghostty
+        Architecture: amd64
+        Depends: libgtk-4-dev libadwaita-1-dev git
+        Maintainer: conradjohnson@fastmail.us
+        Description: Ghostty binary package
+         Ghostty is a fast, feature-rich, and cross-platform terminal emulator that uses platform-native UI and GPU acceleration.
+        EOF
+        dpkg-deb --build ghostty_package
+
+    - name: Create source package
+      run: |
+        mkdir ghostty_source
+        cd ghostty_source
+        dh_make --createorig -s -y -p ghostty
+        cp ../ghostty_package.deb .
+        dch -v 1.0-0ubuntu1 "Initial release."
+        debuild -S -sa
+
+    - name: Upload to PPA
+      env:
+        LAUNCHPAD_USERNAME: ${{ secrets.LAUNCHPAD_USERNAME }}
+        LAUNCHPAD_PPA: ${{ secrets.LAUNCHPAD_PPA }}
+        LAUNCHPAD_GPG_KEY: ${{ secrets.LAUNCHPAD_GPG_KEY }}
+      run: |
+        echo "${{ secrets.LAUNCHPAD_GPG_KEY }}" | gpg --import
+        dput ppa:${{ secrets.LAUNCHPAD_USERNAME }}/${{ secrets.LAUNCHPAD_PPA }} ../ghostty-0ubuntu1_source.changes
