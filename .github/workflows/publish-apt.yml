@@ -16,10 +16,7 @@ jobs:
     - name: Install dependencies
       run: |
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-        echo >> /home/runner/.bashrc
-        echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> /home/runner/.bashrc
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-        sudo brew install zig
+        sudo ./home/linuxbrew/.linuxbrew/bin/brew  install zig
         sudo apt install libgtk-4-dev libadwaita-1-dev git
 
     - name: Build project
